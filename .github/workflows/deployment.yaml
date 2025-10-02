@@ -1,63 +1,28 @@
-name: site deployment
+name: CI/CD Pipeline
+
 on:
     push:
         branches:
-            - master
-            - test
-            - destroy
+            - main
+            
 jobs:
-    setup:
-
-        if: ${{ github.ref_name == 'test' }}
+    deploy:
         runs-on: self-hosted
         steps:
-            - name: print the github object
-              env:
-                WHATEVER: ${{ toJSON(github) }}
-    
-              run: echo $WHATEVER
-
-            - name: checkout from the repository
+            - name: Checkout repository
               uses: actions/checkout@v4
 
-            - name: Build image from Dockerfile
+            - name: Build Docker image
               run: | 
-                
-                sudo docker build -t theoafactor/cyclobold:latest .
-
-            - name: Run the image as a container
+                sudo docker build -t myapp:latest .        
+  
+            - name: Stop and remove old container (if exists)
               run: |
-                sudo  docker run -d -p 80:80 --name cyclobold theoafactor/cyclobold:latest
+                sudo docker rm -f myapp || true
 
-     
-
-    cleanup:
-        if: ${{ github.ref_name == 'destroy' }}
-        runs-on: self-hosted
-        steps:
-      
-            - name: checkout from the repository
-              uses: actions/checkout@v4
-
-            - name: list directory
-              run: ls 
-
-            - name: "Initialize the terraform"
+            - name: Run Docker container
               run: |
-                terraform init
-
-            - name: setup aws cli
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-                aws-region: "eu-west-2"
-                aws-secret-access-key: ${{ secrets.AWS_SECRET }}
-                
-
-            - name: Apply Terraform
-              run: |
-                  cd ~
-                  terraform destroy --auto-approve
+                  sudo docker run -d -p 80:80 --name myapp myapp:latest
 
               
 
